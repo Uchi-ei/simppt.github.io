@@ -1,181 +1,26 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SimplePT</title>
-<style>
-  body {
-    font-family: "Segoe UI", sans-serif;
-    background: #e5ddd5;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-  header {
-    background: #0078ff;
-    color: white;
-    padding: 10px;
-    text-align: center;
-    font-size: 20px;
-  }
-  #chatbox {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-  }
-  .msg {
-    max-width: 70%;
-    padding: 10px;
-    border-radius: 15px;
-    margin-bottom: 10px;
-    line-height: 1.4;
-  }
-  .user {
-    align-self: flex-end;
-    background: #dcf8c6;
-    border-top-right-radius: 0;
-  }
-  .bot {
-    align-self: flex-start;
-    background: #fff;
-    border-top-left-radius: 0;
-  }
-  footer {
-    padding: 10px;
-    background: #f1f1f1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  textarea {
-    width: 100%;
-    resize: none;
-    height: 60px;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-  }
-  button {
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    color: white;
-    background: #0078ff;
-    font-size: 14px;
-  }
-  button:hover { background: #005fcc; }
-  .button-row { display: flex; gap: 10px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SimplePT</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <h1>💬 SimplePT</h1>
 
-<header>💬 SimplePT</header>
+  <div id="chat-box"></div>
 
-<div id="chatbox"></div>
-
-<footer>
-  <textarea id="userInput" placeholder="あなたの質問を入力…"></textarea>
-  <div class="button-row">
-    <button onclick="sendMessage()">送信</button>
-    <button onclick="downloadHistory()">💾 トーク保存</button>
-    <button onclick="clearHistory()">🗑 履歴削除</button>
+  <div id="input-area">
+    <input type="text" id="user-input" placeholder="メッセージを入力...">
+    <button id="send-btn">送信</button>
   </div>
-</footer>
 
-<script>
-  const apiKey = "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"; // ← あとで自分のキーに置き換え
+  <div id="controls">
+    <button id="clear-btn">履歴削除</button>
+    <button id="save-btn">トークを保存</button>
+  </div>
 
-  function appendMessage(text, sender) {
-    const chatbox = document.getElementById("chatbox");
-    const msg = document.createElement("div");
-    msg.classList.add("msg", sender);
-    msg.textContent = text;
-    chatbox.appendChild(msg);
-    chatbox.scrollTop = chatbox.scrollHeight;
-  }
-
-  function saveToLocal(prompt, reply) {
-    const history = JSON.parse(localStorage.getItem("SimplePT_chat") || "[]");
-    history.push({prompt, reply});
-    localStorage.setItem("SimplePT_chat", JSON.stringify(history));
-  }
-
-  function loadHistory() {
-    const history = JSON.parse(localStorage.getItem("SimplePT_chat") || "[]");
-    const chatbox = document.getElementById("chatbox");
-    chatbox.innerHTML = "";
-    history.forEach(msg => {
-      appendMessage(msg.prompt, "user");
-      appendMessage(msg.reply, "bot");
-    });
-  }
-
-  function clearHistory() {
-    localStorage.removeItem("SimplePT_chat");
-    document.getElementById("chatbox").innerHTML = "";
-    alert("履歴を削除しました！");
-  }
-
-  async function sendMessage() {
-    const input = document.getElementById("userInput");
-    const userText = input.value.trim();
-    if (!userText) return;
-    appendMessage(userText, "user");
-    input.value = "";
-
-    appendMessage("考え中…", "bot");
-
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [{role: "user", content: userText}]
-        })
-      });
-
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content || "エラーが発生しました。";
-      document.querySelector(".bot:last-child").textContent = reply;
-      saveToLocal(userText, reply);
-    } catch (e) {
-      document.querySelector(".bot:last-child").textContent = "通信エラーが発生しました。";
-    }
-  }
-
-  function downloadHistory() {
-    const history = JSON.parse(localStorage.getItem("SimplePT_chat") || "[]");
-    if (history.length === 0) {
-      alert("保存するトークがありません！");
-      return;
-    }
-    let text = "=== SimplePT トーク履歴 ===\n\n";
-    history.forEach(h => {
-      text += `あなた：${h.prompt}\nSimplePT：${h.reply}\n\n`;
-    });
-
-    const blob = new Blob([text], {type: "text/plain"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "simplept_log.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  loadHistory();
-</script>
-
+  <script src="script.js"></script>
 </body>
 </html>
